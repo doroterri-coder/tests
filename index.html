@@ -555,7 +555,7 @@ const COURSES = [
   {id:'patho', prefix:'patho_score_', name:'Патофизиология', sub:'Тестовые задания с отмеченными ответами', sections:PATHO_SECTIONS,
    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>'}
 ];
-COURSES.forEach(c=>c.sections.forEach(s=>s.questions.forEach(q=>{q._id=c.id+":"+s.id+":"+q.num;q._sec=s.id;})));
+COURSES.forEach(c=>{let g=0;c.sections.forEach(s=>s.questions.forEach((q,i)=>{q._id=c.id+":"+s.id+":"+q.num;q._sec=s.id;q._pos=i+1;q._g=++g;}));});
 let curCourse = COURSES[0];
 let SECTIONS = curCourse.sections;
 
@@ -885,7 +885,7 @@ function doSearch(){
   const norm=x=>x.toLowerCase().replace(/ё/g,'е');
   srchList=allQ().filter(q=>{
     if(p.sec&&q._sec!==p.sec)return false;
-    if(p.nums.length&&!p.nums.includes(parseInt(q.num,10)))return false;
+    if(p.nums.length){const ok=p.sec?(p.nums.includes(parseInt(q.num,10))||p.nums.includes(q._pos)):p.nums.includes(q._g);if(!ok)return false;}
     if(p.text){
       const sec=SECTIONS.find(s=>s.id===q._sec);
       const inQ=norm(q.text+' '+q.options.map(o=>o.text).join(' ')).includes(p.text);
@@ -908,7 +908,7 @@ function moreSearch(){
   if(srchShown===part.length)h+=`<div class="br-count">${srchList.length?'Найдено: '+srchList.length:''}</div>`;
   h+=part.map(q=>{
     const sec=SECTIONS.find(s=>s.id===q._sec),ans=q.correct.map(i=>q.options[i].letter).join(', ');
-    return `<div class="br-q"><div class="br-meta">Раздел ${sec?sec.id+'. '+sec.name:''} · вопрос ${q.num}${q.correct.length>1?' · несколько ответов':''}</div><b>${hl(q.text,t)}</b>${q.options.map((o,i)=>{const ok=q.correct.includes(i);return `<div class="br-o${ok?' ok':''}"><span class="br-l">${o.letter}</span><span class="br-t">${hl(o.text,t)}</span>${ok?'<span class="br-ck">'+ICONS.check+'</span>':''}</div>`;}).join('')}<div class="br-ans">Правильный ответ: ${ans}</div></div>`;
+    return `<div class="br-q"><div class="br-meta">Раздел ${sec?sec.id+'. '+sec.name:''} · вопрос ${q.num}${(q._g!==parseInt(q.num,10))?' (№'+q._g+' по порядку)':''}${q.correct.length>1?' · несколько ответов':''}</div><b>${hl(q.text,t)}</b>${q.options.map((o,i)=>{const ok=q.correct.includes(i);return `<div class="br-o${ok?' ok':''}"><span class="br-l">${o.letter}</span><span class="br-t">${hl(o.text,t)}</span>${ok?'<span class="br-ck">'+ICONS.check+'</span>':''}</div>`;}).join('')}<div class="br-ans">Правильный ответ: ${ans}</div></div>`;
   }).join('');
   if(!srchList.length)h='<p style="color:var(--muted);text-align:center;margin-top:20px">Ничего не найдено</p>';
   if(srchShown<srchList.length)h+=`<button class="btn btn-ghost" id="srchMore" style="width:100%;justify-content:center" onclick="moreSearch()">Показать ещё (${srchList.length-srchShown})</button>`;
