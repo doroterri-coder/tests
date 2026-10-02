@@ -478,7 +478,7 @@
 
 <div id="browse" class="screen">
   <button class="back-link" onclick="closeBrowse()">&larr; Назад</button>
-  <input class="srch" id="srchInp" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Текст, № вопроса (50) или «раздел 2»…" oninput="doSearch()">
+  <input class="srch" id="srchInp" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Текст, «1 2» (вопрос 1, раздел 2), № вопроса или «раздел 2»…" oninput="doSearch()">
   <div id="srchRes"></div>
 </div>
 
@@ -859,17 +859,29 @@ function openBrowse(){const a=document.querySelector('.screen.active');browseFro
 let srchHl='';
 function parseQuery(raw){
   let t=' '+String(raw).toLowerCase().replace(/ё/g,'е').replace(/[\u00a0\u2000-\u200b\u202f]/g,' ')+' ';
-  let sec=null,nums=[];
+  let sec=null,nums=[],bad=null;
   t=t.replace(/([\s,;.:(])(?:разд[а-я]*\.?|секци[а-я]*|section|р\.)\s*№?\s*0*(\d+)/g,(m,p,d)=>{sec=String(d).padStart(2,'0');return p+' ';});
   t=t.replace(/(?:([\s,;.:(])(?:вопр[а-я]*\.?|задан[а-я]*\.?|зад\.|в\.|q)|(№|#))\s*0*(\d+)/g,(m,p,h,d)=>{nums.push(+d);return (p||' ')+' ';});
   t=t.replace(/\s+/g,' ').trim();
-  if(t&&t.split(/[\s,;]+/).every(x=>/^\d+$/.test(x))){t.split(/[\s,;]+/).forEach(x=>nums.push(+x));t='';}
-  return {sec,nums,text:t};
+  if(t&&t.split(/[\s,;]+/).every(x=>/^\d+$/.test(x))){
+    const a=t.split(/[\s,;]+/);
+    const sid=a.length===2?String(+a[1]).padStart(2,'0'):null;
+    if(sid&&!sec&&SECTIONS.some(s=>s.id===sid)){nums.push(+a[0]);sec=sid;}
+    else if(a.length===2&&!sec){bad=+a[1];nums.push(+a[0]);}
+    else a.forEach(x=>nums.push(+x));
+    t='';
+  }
+  return {sec,nums,text:t,bad};
 }
 function doSearch(){
   const raw=document.getElementById('srchInp').value;
   const p=parseQuery(raw);
   srchHl=p.text;
+  if(p.bad!==null&&p.bad!==undefined){
+    srchList=[];srchShown=0;
+    document.getElementById('srchRes').innerHTML='<p style="color:var(--muted);text-align:center;margin-top:20px">Раздела '+p.bad+' нет в этом предмете (разделов: '+SECTIONS.length+').<br>Формат: «вопрос раздел», например «10 '+SECTIONS.length+'».</p>';
+    return;
+  }
   const norm=x=>x.toLowerCase().replace(/ё/g,'е');
   srchList=allQ().filter(q=>{
     if(p.sec&&q._sec!==p.sec)return false;
